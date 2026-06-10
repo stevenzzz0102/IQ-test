@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ten Sum Grid</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --panel: #111c30;
+      --text: #eff6ff;
+      --muted: #bfdbfe;
+      --cell: #17324f;
+      --cell-hover: #22456c;
+      --cell-selected: #1d4ed8;
+      --cell-size: 32px;
+      --grid-gap: 3px;
+    }
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(110, 231, 249, 0.12), transparent 20%),
+        linear-gradient(135deg, var(--bg), #020617 65%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 14px;
+    }
+    .app {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: minmax(280px, 320px) 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+    .panel {
+      background: rgba(17, 28, 48, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 22px;
+      padding: 14px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(12px);
+    }
+    h1 { margin: 0 0 6px; font-size: 1.7rem; }
+    p { color: var(--muted); line-height: 1.35; font-size: 0.95rem; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .stat-card { background: linear-gradient(180deg, rgba(24, 40, 61, 0.98), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 16px; padding: 10px; }
+    .stat-label { color: var(--muted); font-size: 0.9rem; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+    .tip-box { margin-top: 12px; padding: 10px; border-radius: 14px; background: rgba(30, 41, 59, 0.88); border: 1px solid rgba(148, 163, 184, 0.14); color: var(--text); font-size: 0.92rem; }
+    .board-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .board-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(148, 163, 184, 0.14); color: var(--muted); font-size: 0.92rem; }
+    .pill strong { color: var(--text); }
+    #message { padding: 10px 12px; border-radius: 12px; background: rgba(30, 41, 59, 0.92); border: 1px solid rgba(148, 163, 184, 0.14); color: var(--muted); min-height: 46px; font-size: 0.94rem; }
+    #message.good { color: #bbf7d0; border-color: rgba(74, 222, 128, 0.35); }
+    #message.bad { color: #fecdd3; border-color: rgba(251, 113, 133, 0.35); }
+    .rating-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: #eff6ff;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .rating-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(10, var(--cell-size));
+      grid-template-rows: repeat(16, var(--cell-size));
+      gap: var(--grid-gap);
+      user-select: none;
+      touch-action: none;
+      background: rgba(8, 17, 31, 0.92);
+      border-radius: 18px;
+      padding: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      width: calc(10 * var(--cell-size) + 9 * var(--grid-gap) + 12px);
+      max-width: 100%;
+      overflow: auto;
+    }
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: clamp(6px, 1vw, 10px);
+      background: linear-gradient(180deg, var(--cell), #10253c);
+      color: var(--text);
+      font-size: clamp(0.62rem, 1.1vw, 0.82rem);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.12s ease, opacity 0.12s ease;
+    }
+    .cell:hover { background: linear-gradient(180deg, var(--cell-hover), #17304a); transform: translateY(-1px); }
+    .cell.selected { background: linear-gradient(180deg, #1e40af, #2563eb); border-color: rgba(191, 219, 254, 0.4); }
+    .cell.removed { opacity: 0; pointer-events: none; transform: scale(0.92); }
+    #newGameBtn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(147, 197, 253, 0.35);
+      background: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
+      color: #eff6ff;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(37, 99, 235, 0.35), inset 0 -2px 0 rgba(15, 23, 42, 0.18);
+      transition: transform 0.08s ease, box-shadow 0.18s ease;
+    }
+    #newGameBtn:hover { transform: translateY(-1px); box-shadow: 0 14px 22px rgba(34, 211, 238, 0.28), inset 0 -2px 0 rgba(15, 23, 42, 0.18); }
+    #newGameBtn:active { transform: translateY(0); }
+    @media (max-width: 1080px) { .app { grid-template-columns: 1fr; } .panel { order: 2; } }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .app { gap: 12px; }
+      .panel { padding: 12px; border-radius: 18px; }
+      .stats { grid-template-columns: 1fr; }
+      .board { gap: 2px; padding: 5px; }
+      .cell { border-radius: 6px; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.4rem; }
+      .tip-box, #message { font-size: 0.88rem; }
+      .cell { font-size: 0.56rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <h1>Test your IQ level</h1>
+      <p>Drag a rectangle over the board. If the sum of every number inside it equals 10, the tiles vanish and your score goes up.</p>
+      <div class="stats">
+        <article class="stat-card"><div class="stat-label">Score</div><div id="score" class="stat-value">0</div></article>
+        <article class="stat-card"><div class="stat-label">Time left</div><div id="timer" class="stat-value">02:00</div></article>
+      </div>
+      <div class="tip-box">
+        <label for="sizeRange" style="display:block; margin-bottom:6px; font-weight:700;">Cell size: <span id="sizeLabel">32 px</span></label>
+        <input id="sizeRange" type="range" min="22" max="44" value="32" step="1" style="width:100%; accent-color:#60a5fa;" />
+        <div style="font-size:0.85rem; color:var(--muted); margin-top:4px;">This changes the size of each unit while keeping the 16 × 10 matrix fixed.</div>
+      </div>
+      <button id="newGameBtn" type="button">New Game</button>
+      <div class="tip-box">Tip: select any rectangle whose total equals 10.</div>
+      <div class="tip-box">How to play: click and drag from one tile to another, then release.</div>
+    </section>
+
+    <section class="panel board-wrap">
+      <div id="message">Select a rectangle to begin.</div>
+      <div id="board" class="board" aria-label="Game board"></div>
+    </section>
+  </main>
+
+  <script>
+    const totalTime = 120;
+    const sizeRange = document.getElementById('sizeRange');
+    const sizeLabel = document.getElementById('sizeLabel');
+    const board = document.getElementById('board');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const messageEl = document.getElementById('message');
+    const newGameBtn = document.getElementById('newGameBtn');
+
+    let rows = 16;
+    let cols = 10;
+
+    let grid = [];
+    let score = 0;
+    let timeLeft = totalTime;
+    let timerId = null;
+    let dragActive = false;
+    let startCell = null;
+    let hoverCell = null;
+    let isGameOver = false;
+
+    function randomNumber() { return Math.floor(Math.random() * 9) + 1; }
+
+    function applyCellSize(value) {
+      const px = Number(value);
+      document.documentElement.style.setProperty('--cell-size', `${px}px`);
+      document.documentElement.style.setProperty('--grid-gap', '3px');
+      sizeLabel.textContent = `${px} px`;
+    }
+
+    function createGrid() {
+      grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => randomNumber()));
+      renderGrid();
+      setMessage('Press New Game to start the timer and play.', '');
+    }
+
+    function newGame() {
+      if (timerId) clearInterval(timerId);
+      score = 0;
+      timeLeft = totalTime;
+      isGameOver = false;
+      scoreEl.textContent = '0';
+      updateTimerDisplay();
+      board.style.opacity = '1';
+      createGrid();
+      startTimer();
+      setMessage('New game started! Drag a rectangle and try to remove tiles that sum to 10.', 'good');
+    }
+
+    function renderGrid() {
+      board.innerHTML = '';
+      for (let r = 0; r < rows; r += 1) {
+        for (let c = 0; c < cols; c += 1) {
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.className = 'cell';
+          cell.textContent = grid[r][c] || '';
+          cell.dataset.row = String(r);
+          cell.dataset.col = String(c);
+          cell.addEventListener('pointerdown', onPointerDown);
+          cell.addEventListener('pointerenter', onPointerEnter);
+          board.appendChild(cell);
+        }
+      }
+    }
+
+    function setMessage(text, tone = '') { messageEl.textContent = text; messageEl.className = tone ? tone : ''; }
+    function formatTime(seconds) { const mins = String(Math.floor(seconds / 60)).padStart(2, '0'); const secs = String(seconds % 60).padStart(2, '0'); return `${mins}:${secs}`; }
+    function updateTimerDisplay() { timerEl.textContent = formatTime(timeLeft); }
+
+    function getRating(scoreValue) {
+      if (scoreValue < 30) return { label: 'Baby', emoji: '🍼' };
+      if (scoreValue < 60) return { label: 'Kindergarten', emoji: '🧸' };
+      if (scoreValue < 70) return { label: 'Elementary School', emoji: '\u{1F4CF}' };
+      if (scoreValue < 80) return { label: 'Middle School', emoji: '📚' };
+      if (scoreValue < 90) return { label: 'High School', emoji: '📝' };
+      if (scoreValue < 100) return { label: 'University', emoji: '🏛️' };
+      if (scoreValue < 110) return { label: 'Master', emoji: '🧪' };
+      return { label: 'PhD', emoji: '🎓' };
+    }
+
+    function setFinalMessage(scoreValue) {
+      const rating = getRating(scoreValue);
+      messageEl.innerHTML = `Time is up! Final score: ${scoreValue}. <span class="rating-badge"><span class="rating-dot"></span>${rating.emoji} ${rating.label}</span>`;
+      messageEl.className = 'bad';
+    }
+
+    function startTimer() {
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(() => {
+        timeLeft -= 1;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          updateTimerDisplay();
+          clearInterval(timerId);
+          isGameOver = true;
+          setFinalMessage(score);
+          board.style.opacity = '0.75';
+        }
+      }, 1000);
+    }
+
+    function getSelectionRectangle(start, end) {
+      const r1 = Math.min(start.row, end.row), r2 = Math.max(start.row, end.row);
+      const c1 = Math.min(start.col, end.col), c2 = Math.max(start.col, end.col);
+      return { r1, r2, c1, c2 };
+    }
+    function sumRect(rect) { let total = 0; for (let r = rect.r1; r <= rect.r2; r += 1) for (let c = rect.c1; c <= rect.c2; c += 1) total += grid[r]?.[c] || 0; return total; }
+    function area(rect) { return (rect.r2 - rect.r1 + 1) * (rect.c2 - rect.c1 + 1); }
+    function clearSelection() { document.querySelectorAll('.cell.selected').forEach((node) => node.classList.remove('selected')); }
+    function highlightSelection(start, end) { clearSelection(); const rect = getSelectionRectangle(start, end); for (let r = rect.r1; r <= rect.r2; r += 1) for (let c = rect.c1; c <= rect.c2; c += 1) { const cell = board.querySelector(`[data-row="${r}"][data-col="${c}"]`); if (cell) cell.classList.add('selected'); } }
+
+    function removeSelection(rect) {
+      let removedCount = 0;
+      for (let r = rect.r1; r <= rect.r2; r += 1) for (let c = rect.c1; c <= rect.c2; c += 1) {
+        if (grid[r]?.[c]) {
+          grid[r][c] = 0;
+          removedCount += 1;
+          const cell = board.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+          if (cell) { cell.classList.add('removed'); cell.textContent = ''; }
+        }
+      }
+      score += removedCount;
+      scoreEl.textContent = String(score);
+      setMessage(`Removed ${removedCount} tile(s).`, 'good');
+    }
+
+    function trySelection(start, end) {
+      if (isGameOver) return;
+      const rect = getSelectionRectangle(start, end);
+      const total = sumRect(rect);
+      if (total === 10 && area(rect) > 0) {
+        removeSelection(rect);
+        if (!grid.flat().some((value) => value > 0)) setTimeout(() => { createGrid(); setMessage('The board is clear. A fresh grid has been generated.', 'good'); }, 350);
+      } else {
+        clearSelection();
+      }
+    }
+
+    function onPointerDown(event) {
+      if (isGameOver) return;
+      startCell = { row: Number(event.currentTarget.dataset.row), col: Number(event.currentTarget.dataset.col) };
+      hoverCell = startCell;
+      dragActive = true;
+      highlightSelection(startCell, hoverCell);
+      event.preventDefault();
+    }
+    function onPointerEnter(event) {
+      if (!dragActive || isGameOver) return;
+      hoverCell = { row: Number(event.currentTarget.dataset.row), col: Number(event.currentTarget.dataset.col) };
+      highlightSelection(startCell, hoverCell);
+    }
+    document.addEventListener('pointerup', (event) => {
+      if (!dragActive || !startCell || isGameOver) return;
+      const target = event.target.closest('.cell');
+      const endCell = target ? { row: Number(target.dataset.row), col: Number(target.dataset.col) } : hoverCell;
+      trySelection(startCell, endCell);
+      dragActive = false; startCell = null; hoverCell = null; clearSelection();
+    });
+    document.addEventListener('pointercancel', () => { dragActive = false; startCell = null; hoverCell = null; clearSelection(); });
+
+    sizeRange.addEventListener('input', (event) => applyCellSize(event.target.value));
+    newGameBtn.addEventListener('click', newGame);
+
+    applyCellSize(sizeRange.value);
+    updateTimerDisplay();
+    setMessage('Choose a size, then press New Game to begin.', '');
+  </script>
+</body>
+</html>
