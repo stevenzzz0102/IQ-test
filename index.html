@@ -185,6 +185,7 @@
     let dragActive = false;
     let startCell = null;
     let hoverCell = null;
+    let activePointerId = null;
     let isGameOver = false;
 
     function randomNumber() { return Math.floor(Math.random() * 9) + 1; }
@@ -226,7 +227,6 @@
           cell.dataset.row = String(r);
           cell.dataset.col = String(c);
           cell.addEventListener('pointerdown', onPointerDown);
-          cell.addEventListener('pointerenter', onPointerEnter);
           board.appendChild(cell);
         }
       }
@@ -306,27 +306,42 @@
       }
     }
 
+    function getCellFromEvent(event) {
+      const target = event.target.closest ? event.target.closest('.cell') : null;
+      if (target) return target;
+      return document.elementFromPoint(event.clientX, event.clientY)?.closest('.cell') || null;
+    }
+
     function onPointerDown(event) {
       if (isGameOver) return;
-      startCell = { row: Number(event.currentTarget.dataset.row), col: Number(event.currentTarget.dataset.col) };
+      const cell = event.currentTarget;
+      startCell = { row: Number(cell.dataset.row), col: Number(cell.dataset.col) };
       hoverCell = startCell;
       dragActive = true;
+      activePointerId = event.pointerId;
+      cell.setPointerCapture?.(event.pointerId);
       highlightSelection(startCell, hoverCell);
       event.preventDefault();
     }
-    function onPointerEnter(event) {
-      if (!dragActive || isGameOver) return;
-      hoverCell = { row: Number(event.currentTarget.dataset.row), col: Number(event.currentTarget.dataset.col) };
+
+    function onPointerMove(event) {
+      if (!dragActive || isGameOver || event.pointerId !== activePointerId) return;
+      const cell = getCellFromEvent(event);
+      if (!cell) return;
+      hoverCell = { row: Number(cell.dataset.row), col: Number(cell.dataset.col) };
       highlightSelection(startCell, hoverCell);
     }
+
+    board.addEventListener('pointermove', onPointerMove);
+
     document.addEventListener('pointerup', (event) => {
-      if (!dragActive || !startCell || isGameOver) return;
-      const target = event.target.closest('.cell');
+      if (!dragActive || !startCell || isGameOver || event.pointerId !== activePointerId) return;
+      const target = getCellFromEvent(event);
       const endCell = target ? { row: Number(target.dataset.row), col: Number(target.dataset.col) } : hoverCell;
       trySelection(startCell, endCell);
-      dragActive = false; startCell = null; hoverCell = null; clearSelection();
+      dragActive = false; startCell = null; hoverCell = null; activePointerId = null; clearSelection();
     });
-    document.addEventListener('pointercancel', () => { dragActive = false; startCell = null; hoverCell = null; clearSelection(); });
+    document.addEventListener('pointercancel', () => { dragActive = false; startCell = null; hoverCell = null; activePointerId = null; clearSelection(); });
 
     sizeRange.addEventListener('input', (event) => applyCellSize(event.target.value));
     newGameBtn.addEventListener('click', newGame);
