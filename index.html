@@ -84,7 +84,10 @@
       grid-template-rows: repeat(16, var(--cell-size));
       gap: var(--grid-gap);
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       touch-action: none;
+      overscroll-behavior: none;
       background: rgba(8, 17, 31, 0.92);
       border-radius: 18px;
       padding: 6px;
@@ -143,7 +146,7 @@
 <body>
   <main class="app">
     <section class="panel">
-      <h1>Test your IQ </h1>
+      <h1>Test your IQ</h1>
       <p>Drag a rectangle over the board. If the sum of every number inside it equals 10, the tiles vanish and your score goes up.</p>
       <div class="stats">
         <article class="stat-card"><div class="stat-label">Score</div><div id="score" class="stat-value">0</div></article>
@@ -307,8 +310,6 @@
     }
 
     function getCellFromEvent(event) {
-      const target = event.target.closest ? event.target.closest('.cell') : null;
-      if (target) return target;
       return document.elementFromPoint(event.clientX, event.clientY)?.closest('.cell') || null;
     }
 
@@ -319,7 +320,6 @@
       hoverCell = startCell;
       dragActive = true;
       activePointerId = event.pointerId;
-      cell.setPointerCapture?.(event.pointerId);
       highlightSelection(startCell, hoverCell);
       event.preventDefault();
     }
